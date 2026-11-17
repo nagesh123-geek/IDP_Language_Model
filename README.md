@@ -149,10 +149,5 @@ The general workflow is:
 
 ## 6. Citation
 
-If you use this repository or build upon the implementations, please cite the associated research work.
+If you use this repository or build upon the implementations, please cite the associated research work.(coming soon)
 
----
-
-## 7. Acknowledgements
-
-This work focuses on hierarchical protein language representations and machine learning approaches for understanding and predicting the properties of intrinsically disordered proteins.
