@@ -1,6 +1,6 @@
 """
 Inference for EmbeddingMultiTaskRegressor: pass a PLM embedding (or a CSV of
-sequence+embedding rows), get back the 4 predicted properties.
+sequence+embedding rows), get back the 5 predicted properties.
 
 Usage
 -----
