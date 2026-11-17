@@ -1,8 +1,9 @@
 """
 Transformer-based multi-task regression model for protein sequence properties.
 
-Predicts 4 properties per sequence:
+Predicts 5 properties per sequence:
     - asphericity
+    - prefactor
     - scaled RE  (end-to-end distance)
     - scaled RG  (radius of gyration)
     - scaling exponent
