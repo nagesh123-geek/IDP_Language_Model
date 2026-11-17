@@ -23,38 +23,23 @@ DEVICE = "cuda:7" if torch.cuda.is_available() else "cpu"
 
 MODEL_DIR = "hierarchical_protein_model_cs=50_stride=25"
 
-INPUT_FILE = (
-    "sequences_len_le_500.txt"
-)
+INPUT_FILE = ("sequences_len_le_500.txt")
 
-SAVE_DIR = (
-    "TokenEmbeddings_seq_500"
-)
+SAVE_DIR = ("TokenEmbeddings_seq_500")
 
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 # Directory for individual token representations
-TOKEN_SAVE_DIR = os.path.join(
-    SAVE_DIR,
-    "token_embeddings"
-)
+TOKEN_SAVE_DIR = os.path.join(SAVE_DIR,"token_embeddings")
 
-os.makedirs(
-    TOKEN_SAVE_DIR,
-    exist_ok=True
-)
+os.makedirs(TOKEN_SAVE_DIR,exist_ok=True)
 
 
 # ============================================================
 # LOAD VOCAB
 # ============================================================
 
-with open(
-    os.path.join(
-        MODEL_DIR,
-        "vocab.json"
-    )
-) as f:
+with open(os.path.join(MODEL_DIR,"vocab.json")) as f:
 
     vocab_data = json.load(f)
 
@@ -63,10 +48,7 @@ stoi = vocab_data["stoi"]
 
 PAD_ID = vocab_data["PAD_ID"]
 
-itos = {
-    v: k
-    for k, v in stoi.items()
-}
+itos = { v: k for k, v in stoi.items()}
 
 VOCAB_SIZE = len(stoi)
 
@@ -81,30 +63,16 @@ print("PAD ID:", PAD_ID)
 
 def create_chunks(x):
 
-    starts = list(
-        range(
-            0,
-            SEQ_LEN - CHUNK_SIZE + 1,
-            STRIDE
-        )
-    )
+    starts = list(range(0,SEQ_LEN - CHUNK_SIZE + 1,STRIDE))
 
     # Make sure the final region is included
     if starts[-1] != SEQ_LEN - CHUNK_SIZE:
 
-        starts.append(
-            SEQ_LEN - CHUNK_SIZE
-        )
+        starts.append(SEQ_LEN - CHUNK_SIZE)
 
-    chunks = [
-        x[:, s:s + CHUNK_SIZE]
-        for s in starts
-    ]
+    chunks = [x[:, s:s + CHUNK_SIZE] for s in starts]
 
-    return torch.stack(
-        chunks,
-        dim=1
-    )
+    return torch.stack(chunks,dim=1)
 
 
 # ============================================================
@@ -113,34 +81,20 @@ def create_chunks(x):
 
 def get_chunk_starts():
 
-    starts = list(
-        range(
-            0,
-            SEQ_LEN - CHUNK_SIZE + 1,
-            STRIDE
-        )
-    )
-
+    starts = list(range(0,SEQ_LEN - CHUNK_SIZE + 1,STRIDE))
+    
     if starts[-1] != SEQ_LEN - CHUNK_SIZE:
 
-        starts.append(
-            SEQ_LEN - CHUNK_SIZE
-        )
+        starts.append(SEQ_LEN - CHUNK_SIZE)
 
     return starts
 
 
 CHUNK_STARTS = get_chunk_starts()
 
-print(
-    "Chunk starts:",
-    CHUNK_STARTS
-)
+print("Chunk starts:",CHUNK_STARTS)
 
-print(
-    "Number of chunks:",
-    len(CHUNK_STARTS)
-)
+print("Number of chunks:",len(CHUNK_STARTS))
 
 
 # ============================================================
@@ -149,57 +103,26 @@ print(
 
 class PositionalEncoding(nn.Module):
 
-    def __init__(
-        self,
-        dim,
-        max_len=512
-    ):
+    def __init__(self,dim,max_len=512):
 
         super().__init__()
 
-        pe = torch.zeros(
-            max_len,
-            dim
-        )
+        pe = torch.zeros(max_len,dim)
 
-        pos = torch.arange(
-            max_len
-        ).unsqueeze(1)
+        pos = torch.arange(max_len).unsqueeze(1)
 
-        div = torch.exp(
-            torch.arange(
-                0,
-                dim,
-                2
-            )
-            *
-            (
-                -math.log(10000.0)
-                / dim
-            )
-        )
+        div = torch.exp(torch.arange(0,dim,2)*(-math.log(10000.0)/ dim))
+        pe[:, 0::2] = torch.sin(pos * div)
 
-        pe[:, 0::2] = torch.sin(
-            pos * div
-        )
+        pe[:, 1::2] = torch.cos(pos * div)
+        
 
-        pe[:, 1::2] = torch.cos(
-            pos * div
-        )
-
-        self.register_buffer(
-            "pe",
-            pe.unsqueeze(0)
-        )
+        self.register_buffer("pe",pe.unsqueeze(0))
 
 
     def forward(self, x):
 
-        return (
-            x
-            +
-            self.pe[:, :x.size(1)]
-        )
+        return ( x + self.pe[:, :x.size(1)])
 
 
 # ============================================================
@@ -212,44 +135,19 @@ class LocalEncoder(nn.Module):
 
         super().__init__()
 
-        self.embed = nn.Embedding(
-            VOCAB_SIZE,
-            DIM,
-            padding_idx=PAD_ID
-        )
+        self.embed = nn.Embedding(VOCAB_SIZE,DIM,padding_idx=PAD_ID)
 
-        self.pos = PositionalEncoding(
-            DIM,
-            CHUNK_SIZE + 1
-        )
+        self.pos = PositionalEncoding( DIM,CHUNK_SIZE + 1)
 
-        self.cls = nn.Parameter(
-            torch.randn(
-                1,
-                1,
-                DIM
-            )
-        )
+        self.cls = nn.Parameter(torch.randn(1,1,DIM))
 
-        enc = nn.TransformerEncoderLayer(
-            d_model=DIM,
-            nhead=4,
-            batch_first=True
-        )
+        enc = nn.TransformerEncoderLayer(d_model=DIM,nhead=4,batch_first=True)
 
-        self.encoder = nn.TransformerEncoder(
-            enc,
-            num_layers=2
-        )
+        self.encoder = nn.TransformerEncoder(enc,num_layers=2)
 
-        self.norm = nn.LayerNorm(
-            DIM
-        )
+        self.norm = nn.LayerNorm(DIM)
 
-        self.lm_head = nn.Linear(
-            DIM,
-            VOCAB_SIZE
-        )
+        self.lm_head = nn.Linear(DIM,VOCAB_SIZE)
 
 
     def forward(self, x):
@@ -266,19 +164,9 @@ class LocalEncoder(nn.Module):
         # CLS token
         # ----------------------------------------------------
 
-        cls = self.cls.expand(
-            B,
-            -1,
-            -1
-        )
+        cls = self.cls.expand(B,-1,-1)
 
-        h = torch.cat(
-            [
-                cls,
-                h
-            ],
-            dim=1
-        )
+        h = torch.cat([cls,h],dim=1)
 
         # ----------------------------------------------------
         # Positional encoding
@@ -290,31 +178,15 @@ class LocalEncoder(nn.Module):
         # Padding mask
         # ----------------------------------------------------
 
-        pad_mask = (
-            x == PAD_ID
-        )
+        pad_mask = (x == PAD_ID)
 
-        pad_mask = torch.cat(
-            [
-                torch.zeros(
-                    B,
-                    1,
-                    dtype=torch.bool,
-                    device=x.device
-                ),
-                pad_mask
-            ],
-            dim=1
-        )
+        pad_mask = torch.cat([torch.zeros(B,1,dtype=torch.bool,device=x.device),pad_mask],dim=1)
 
         # ----------------------------------------------------
         # Transformer
         # ----------------------------------------------------
 
-        h = self.encoder(
-            h,
-            src_key_padding_mask=pad_mask
-        )
+        h = self.encoder(h,src_key_padding_mask=pad_mask)
 
         # ----------------------------------------------------
         # Layer normalization
@@ -338,15 +210,9 @@ class LocalEncoder(nn.Module):
         # Language model prediction
         # ----------------------------------------------------
 
-        logits = self.lm_head(
-            token_repr
-        )
+        logits = self.lm_head(token_repr)
 
-        return (
-            cls_token,
-            token_repr,
-            logits
-        )
+        return (cls_token,token_repr,logits)
 
 
 # ============================================================
@@ -359,40 +225,18 @@ class GlobalEncoder(nn.Module):
 
         super().__init__()
 
-        self.global_cls = nn.Parameter(
-            torch.randn(
-                1,
-                1,
-                DIM
-            )
-        )
+        self.global_cls = nn.Parameter(torch.randn(1,1,DIM))
 
-        self.pos = PositionalEncoding(
-            DIM,
-            512
-        )
+        self.pos = PositionalEncoding( DIM,512)
 
-        enc = nn.TransformerEncoderLayer(
-            d_model=DIM,
-            nhead=4,
-            batch_first=True
-        )
+        enc = nn.TransformerEncoderLayer(d_model=DIM,nhead=4,batch_first=True)
 
-        self.encoder = nn.TransformerEncoder(
-            enc,
-            num_layers=2
-        )
+        self.encoder = nn.TransformerEncoder(enc,num_layers=2)
 
-        self.norm = nn.LayerNorm(
-            DIM
-        )
+        self.norm = nn.LayerNorm(DIM)
 
 
-    def forward(
-        self,
-        chunk_embeddings,
-        chunk_valid
-    ):
+    def forward(self,chunk_embeddings,chunk_valid):
 
         B, N, D = chunk_embeddings.shape
 
@@ -400,19 +244,8 @@ class GlobalEncoder(nn.Module):
         # Global CLS
         # ----------------------------------------------------
 
-        cls = self.global_cls.expand(
-            B,
-            -1,
-            -1
-        )
-
-        h = torch.cat(
-            [
-                cls,
-                chunk_embeddings
-            ],
-            dim=1
-        )
+        cls = self.global_cls.expand(B,-1,-1)
+        h = torch.cat([cls,chunk_embeddings],dim=1)
 
         # ----------------------------------------------------
         # Positional encoding
@@ -424,27 +257,13 @@ class GlobalEncoder(nn.Module):
         # Padding mask
         # ----------------------------------------------------
 
-        global_pad_mask = torch.cat(
-            [
-                torch.zeros(
-                    B,
-                    1,
-                    dtype=torch.bool,
-                    device=h.device
-                ),
-                ~chunk_valid
-            ],
-            dim=1
-        )
+        global_pad_mask = torch.cat([torch.zeros(B,1,dtype=torch.bool, device=h.device),~chunk_valid],dim=1)
 
         # ----------------------------------------------------
         # Transformer
         # ----------------------------------------------------
 
-        h = self.encoder(
-            h,
-            src_key_padding_mask=global_pad_mask
-        )
+        h = self.encoder(h,src_key_padding_mask=global_pad_mask)
 
         # ----------------------------------------------------
         # Layer normalization
@@ -488,11 +307,7 @@ class HierarchicalModel(nn.Module):
         # Valid chunks
         # ----------------------------------------------------
 
-        chunk_valid = (
-            (chunks != PAD_ID)
-            .sum(dim=2)
-            >= 4
-        )
+        chunk_valid = ((chunks != PAD_ID).sum(dim=2)>= 4)
 
         # ----------------------------------------------------
         # Local encoding
@@ -500,34 +315,19 @@ class HierarchicalModel(nn.Module):
 
         for i in range(N):
 
-            (
-                cls_token,
-                token_repr,
-                logits
-            ) = self.local(
-                chunks[:, i]
-            )
+            (cls_token,token_repr,logits) = self.local(chunks[:, i])
 
-            cls_tokens.append(
-                cls_token
-            )
+            cls_tokens.append( cls_token)
 
-            token_reprs.append(
-                token_repr
-            )
+            token_reprs.append(token_repr)
 
-            logits_list.append(
-                logits
-            )
+            logits_list.append(logits)
 
         # ----------------------------------------------------
         # Stack CLS representations
         # ----------------------------------------------------
 
-        cls_tokens = torch.stack(
-            cls_tokens,
-            dim=1
-        )
+        cls_tokens = torch.stack(cls_tokens,dim=1)
 
         # Shape:
         #
@@ -537,10 +337,7 @@ class HierarchicalModel(nn.Module):
         # Stack token representations
         # ----------------------------------------------------
 
-        token_reprs = torch.stack(
-            token_reprs,
-            dim=1
-        )
+        token_reprs = torch.stack(token_reprs, dim=1)
 
         # Shape:
         #
@@ -550,36 +347,18 @@ class HierarchicalModel(nn.Module):
         # Global encoder
         # ----------------------------------------------------
 
-        z = self.global_enc(
-            cls_tokens,
-            chunk_valid
-        )
+        z = self.global_enc(cls_tokens,chunk_valid)
 
-        return (
-            z,
-            cls_tokens,
-            token_reprs,
-            logits_list
-        )
+        return (z,cls_tokens,token_reprs,logits_list)
 
 
 # ============================================================
 # LOAD MODEL
 # ============================================================
 
-model = HierarchicalModel().to(
-    DEVICE
-)
+model = HierarchicalModel().to(DEVICE)
 
-model.load_state_dict(
-    torch.load(
-        os.path.join(
-            MODEL_DIR,
-            "model.pt"
-        ),
-        map_location=DEVICE
-    )
-)
+model.load_state_dict(torch.load(os.path.join(MODEL_DIR,"model.pt"),map_location=DEVICE))
 
 model.eval()
 
@@ -594,18 +373,9 @@ def encode_sequence(seq):
 
     seq = seq.strip().upper()
 
-    tokens = [
-        stoi.get(
-            a,
-            stoi["X"]
-        )
-        for a in seq
-    ]
+    tokens = [stoi.get(a,stoi["X"]) for a in seq]
 
-    length = min(
-        len(tokens),
-        SEQ_LEN
-    )
+    length = min(len(tokens), SEQ_LEN)
 
     # --------------------------------------------------------
     # Truncate
@@ -626,39 +396,22 @@ def encode_sequence(seq):
 
     else:
 
-        tokens += [
-            PAD_ID
-        ] * (
-            SEQ_LEN - len(tokens)
-        )
+        tokens += [PAD_ID] * (SEQ_LEN - len(tokens))
 
-    return (
-        torch.tensor(tokens),
-        length
-    )
+    return (torch.tensor(tokens),length)
 
 
 # ============================================================
 # MASK SEQUENCE
 # ============================================================
 
-def mask_sequence(
-    x,
-    p=0.2
-):
+def mask_sequence(x,p=0.2):
 
     x = x.clone()
 
-    valid = (
-        x != PAD_ID
-    )
+    valid = (x != PAD_ID)
 
-    mask = (
-        torch.rand_like(
-            x.float()
-        )
-        < p
-    ) & valid
+    mask = (torch.rand_like( x.float() ) < p) & valid
 
     # Replace masked residues with X
     x[mask] = stoi["X"]
@@ -680,15 +433,10 @@ with open(INPUT_FILE) as f:
 
         if line:
 
-            sequences.append(
-                line
-            )
+            sequences.append(line)
 
 
-print(
-    "Number of sequences:",
-    len(sequences)
-)
+print("Number of sequences:",len(sequences))
 
 
 # ============================================================
@@ -715,44 +463,29 @@ overall_total = 0
 # INFERENCE
 # ============================================================
 
-for seq_idx, seq in enumerate(
-    sequences
-):
+for seq_idx, seq in enumerate(sequences):
 
     # --------------------------------------------------------
     # Encode sequence
     # --------------------------------------------------------
 
-    x, length = encode_sequence(
-        seq
-    )
+    x, length = encode_sequence(seq)
 
-    sequence_lengths.append(
-        length
-    )
+    sequence_lengths.append(length)
 
-    x = x.unsqueeze(
-        0
-    ).to(
-        DEVICE
-    )
+    x = x.unsqueeze( 0).to(DEVICE)
 
     # --------------------------------------------------------
     # Mask sequence
     # --------------------------------------------------------
 
-    x = mask_sequence(
-        x,
-        p=0.2
-    )
+    x = mask_sequence(x,p=0.2)
 
     # --------------------------------------------------------
     # Create overlapping chunks
     # --------------------------------------------------------
 
-    chunks = create_chunks(
-        x
-    )
+    chunks = create_chunks(x)
 
     # --------------------------------------------------------
     # Model inference
@@ -760,47 +493,25 @@ for seq_idx, seq in enumerate(
 
     with torch.no_grad():
 
-        (
-            z,
-            cls_tokens,
-            token_reprs,
-            logits_list
-        ) = model(
-            chunks
-        )
+        (z,cls_tokens,token_reprs,logits_list) = model(chunks)
 
 
     # ========================================================
     # GLOBAL REPRESENTATION
     # ========================================================
 
-    global_emb = (
-        z
-        .squeeze(0)
-        .cpu()
-        .numpy()
-    )
+    global_emb = (z.squeeze(0).cpu().numpy())
 
-    global_embeddings.append(
-        global_emb.tolist()
-    )
+    global_embeddings.append(global_emb.tolist())
 
 
     # ========================================================
     # LOCAL REPRESENTATION
     # ========================================================
 
-    local_emb = (
-        cls_tokens
-        .mean(dim=1)
-        .squeeze(0)
-        .cpu()
-        .numpy()
-    )
+    local_emb = (cls_tokens.mean(dim=1).squeeze(0).cpu().numpy())
 
-    local_embeddings.append(
-        local_emb.tolist()
-    )
+    local_embeddings.append(local_emb.tolist())
 
 
     # ========================================================
@@ -813,47 +524,27 @@ for seq_idx, seq in enumerate(
     #
     # Remove batch dimension.
 
-    token_reprs = (
-        token_reprs
-        .squeeze(0)
-        .cpu()
-        .numpy()
-    )
+    token_reprs = (token_reprs.squeeze(0).cpu().numpy())
 
 
     # --------------------------------------------------------
     # Accumulate representations for original residues
     # --------------------------------------------------------
 
-    residue_repr = np.zeros(
-        (
-            length,
-            DIM
-        ),
-        dtype=np.float32
-    )
+    residue_repr = np.zeros((length,DIM),dtype=np.float32)
 
-    residue_count = np.zeros(
-        length,
-        dtype=np.float32
-    )
+    residue_count = np.zeros(length,dtype=np.float32)
 
 
     # --------------------------------------------------------
     # Map overlapping chunks back to original sequence
     # --------------------------------------------------------
 
-    for chunk_idx, start in enumerate(
-        CHUNK_STARTS
-    ):
+    for chunk_idx, start in enumerate(CHUNK_STARTS):
 
-        chunk_repr = token_reprs[
-            chunk_idx
-        ]
+        chunk_repr = token_reprs[chunk_idx]
 
-        for j in range(
-            CHUNK_SIZE
-        ):
+        for j in range(CHUNK_SIZE):
 
             pos = start + j
 
@@ -861,9 +552,7 @@ for seq_idx, seq in enumerate(
             if pos >= length:
                 continue
 
-            residue_repr[pos] += (
-                chunk_repr[j]
-            )
+            residue_repr[pos] += ( chunk_repr[j])
 
             residue_count[pos] += 1.0
 
@@ -872,17 +561,9 @@ for seq_idx, seq in enumerate(
     # Average overlapping representations
     # --------------------------------------------------------
 
-    valid_positions = (
-        residue_count > 0
-    )
+    valid_positions = (residue_count > 0)
 
-    residue_repr[
-        valid_positions
-    ] /= (
-        residue_count[
-            valid_positions
-        ][:, None]
-    )
+    residue_repr[valid_positions] /= (residue_count[valid_positions][:, None])
 
 
     # ========================================================
@@ -903,15 +584,9 @@ for seq_idx, seq in enumerate(
     #
     # saved shape = (251, 512)
 
-    token_file = os.path.join(
-        TOKEN_SAVE_DIR,
-        f"sample_{seq_idx + 1}.npy"
-    )
+    token_file = os.path.join(TOKEN_SAVE_DIR,f"sample_{seq_idx + 1}.npy")
 
-    np.save(
-        token_file,
-        residue_repr
-    )
+    np.save(token_file,residue_repr)
 
 
     # ========================================================
@@ -922,18 +597,11 @@ for seq_idx, seq in enumerate(
 
     for logits in logits_list:
 
-        pred = logits.argmax(
-            dim=-1
-        )
+        pred = logits.argmax(dim=-1)
 
-        pred_chunks.append(
-            pred
-        )
+        pred_chunks.append(pred)
 
-    pred_chunks = torch.stack(
-        pred_chunks,
-        dim=1
-    )
+    pred_chunks = torch.stack(pred_chunks,dim=1)
 
 
     # ========================================================
@@ -942,53 +610,27 @@ for seq_idx, seq in enumerate(
 
     target_chunks = chunks
 
-    correct = (
-        pred_chunks
-        ==
-        target_chunks
-    )
+    correct = (pred_chunks == target_chunks)
 
-    valid = (
-        target_chunks
-        != PAD_ID
-    )
+    valid = (target_chunks != PAD_ID)
 
-    overall_correct += (
-        correct & valid
-    ).sum().item()
+    overall_correct += (correct & valid).sum().item()
 
-    overall_total += (
-        valid
-    ).sum().item()
+    overall_total += (valid).sum().item()
 
 
     # ========================================================
     # RECONSTRUCTION
     # ========================================================
 
-    recon_tokens = np.full(
-        SEQ_LEN,
-        PAD_ID,
-        dtype=np.int64
-    )
+    recon_tokens = np.full(SEQ_LEN,PAD_ID,dtype=np.int64)
 
 
-    for chunk_idx, start in enumerate(
-        CHUNK_STARTS
-    ):
+    for chunk_idx, start in enumerate(CHUNK_STARTS):
 
-        pred_chunk = (
-            pred_chunks[
-                0,
-                chunk_idx
-            ]
-            .cpu()
-            .numpy()
-        )
+        pred_chunk = (pred_chunks[0,chunk_idx].cpu().numpy())
 
-        for j in range(
-            CHUNK_SIZE
-        ):
+        for j in range(CHUNK_SIZE):
 
             pos = start + j
 
@@ -997,32 +639,20 @@ for seq_idx, seq in enumerate(
 
             if recon_tokens[pos] == PAD_ID:
 
-                recon_tokens[pos] = (
-                    pred_chunk[j]
-                )
+                recon_tokens[pos] = (pred_chunk[j])
 
 
     # --------------------------------------------------------
     # Convert reconstructed tokens
     # --------------------------------------------------------
 
-    recon_seq = "".join(
-        [
-            itos[int(tok)]
-            for tok in recon_tokens[
-                :length
-            ]
-        ]
-    )
+    recon_seq = "".join([itos[int(tok)] for tok in recon_tokens[:length]])
 
 
-    comparison.append(
-        f"ORIG:  {seq}"
-    )
 
-    comparison.append(
-        f"RECON: {recon_seq}"
-    )
+    comparison.append(f"ORIG:  {seq}")
+
+    comparison.append(f"RECON: {recon_seq}")
 
     comparison.append("")
 
@@ -1031,83 +661,45 @@ for seq_idx, seq in enumerate(
     # PROGRESS
     # ========================================================
 
-    if (
-        seq_idx + 1
-    ) % 100 == 0:
+    if (seq_idx + 1) % 100 == 0:
 
-        print(
-            f"Processed "
+        print(f"Processed "
             f"{seq_idx + 1}/"
-            f"{len(sequences)}" , flush=True
-        )
+            f"{len(sequences)}" , flush=True)
 
 
 # ============================================================
 # RECONSTRUCTION ACCURACY
 # ============================================================
 
-accuracy = (
-    overall_correct
-    /
-    overall_total
-)
+accuracy = (overall_correct/overall_total)
 
-print(
-    "\nReconstruction accuracy:",
-    f"{accuracy:.4f}"
-)
+print("\nReconstruction accuracy:",f"{accuracy:.4f}")
 
 
 # ============================================================
 # SAVE LOCAL EMBEDDINGS
 # ============================================================
 
-with open(
-    os.path.join(
-        SAVE_DIR,
-        "local_embeddings.json"
-    ),
-    "w"
-) as f:
+with open(os.path.join(SAVE_DIR,"local_embeddings.json"),"w") as f:
 
-    json.dump(
-        local_embeddings,
-        f
-    )
+    json.dump(local_embeddings,f)
 
 
 # ============================================================
 # SAVE GLOBAL EMBEDDINGS
 # ============================================================
 
-with open(
-    os.path.join(
-        SAVE_DIR,
-        "global_embeddings.json"
-    ),
-    "w"
-) as f:
+with open(os.path.join(SAVE_DIR,"global_embeddings.json"),"w") as f:
 
-    json.dump(
-        global_embeddings,
-        f
-    )
+    json.dump(global_embeddings,f)
 
 
 # ============================================================
 # SAVE SEQUENCE LENGTHS
 # ============================================================
 
-np.save(
-    os.path.join(
-        SAVE_DIR,
-        "sequence_lengths.npy"
-    ),
-    np.array(
-        sequence_lengths,
-        dtype=np.int32
-    )
-)
+np.save(os.path.join(SAVE_DIR,"sequence_lengths.npy"),np.array(sequence_lengths,dtype=np.int32))
 
 
 # ============================================================
