@@ -22,10 +22,7 @@ import csv
 
 import torch
 
-from lstm import (
-    ProteinMultiTaskRegressor,
-    encode_sequence,
-)
+from lstm import (ProteinMultiTaskRegressor,encode_sequence)
 
 
 def load_model(checkpoint_path, device):
