@@ -65,36 +65,17 @@ X_scaled = scaler.fit_transform(x)
 
 print("\nRunning PCA...")
 
-pca = PCA(
-    n_components=0.95,
-    random_state=42
-)
+pca = PCA(n_components=0.95,random_state=42)
 
-X_pca = pca.fit_transform(
-    X_scaled
-)
+X_pca = pca.fit_transform(X_scaled)
 
-explained = np.sum(
-    pca.explained_variance_ratio_
-)
+explained = np.sum(pca.explained_variance_ratio_)
 
-print(
-    "PCA shape:",
-    X_pca.shape
-)
+print("PCA shape:",X_pca.shape)
 
-print(
-    "Explained variance:",
-    explained
-)
+print("Explained variance:",explained)
 
-np.save(
-    os.path.join(
-        SAVE_DIR,
-        "pca_embeddings.npy"
-    ),
-    X_pca
-)
+np.save(os.path.join(SAVE_DIR,"pca_embeddings.npy"),X_pca)
 
 # ============================================================
 # KMEANS
@@ -102,40 +83,15 @@ np.save(
 
 print("\nRunning KMeans...")
 
-kmeans = KMeans(
-    n_clusters=20,
-    random_state=42,
-    n_init=20
-)
+kmeans = KMeans(n_clusters=20,random_state=42,n_init=20)
 
-labels = kmeans.fit_predict(
-    X_pca
-)
+labels = kmeans.fit_predict(X_pca)
 
-np.save(
-    os.path.join(
-        SAVE_DIR,
-        "kmeans_labels.npy"
-    ),
-    labels
-)
+np.save(os.path.join(SAVE_DIR,"kmeans_labels.npy"),labels)
 
-np.savetxt(
-    os.path.join(
-        SAVE_DIR,
-        "kmeans_labels.txt"
-    ),
-    labels,
-    fmt="%d"
-)
+np.savetxt(os.path.join(SAVE_DIR,"kmeans_labels.txt"),labels,fmt="%d")
 
-np.save(
-    os.path.join(
-        SAVE_DIR,
-        "cluster_centers.npy"
-    ),
-    kmeans.cluster_centers_
-)
+np.save(os.path.join(SAVE_DIR,"cluster_centers.npy"),kmeans.cluster_centers_)
 
 print("KMeans done.")
 
@@ -145,56 +101,29 @@ print("KMeans done.")
 
 print("\nComputing clustering metrics...")
 
-sil = silhouette_score(
-    X_pca,
-    labels
-)
+sil = silhouette_score(X_pca,labels)
 
-ch = calinski_harabasz_score(
-    X_pca,
-    labels
-)
+ch = calinski_harabasz_score(X_pca,labels)
 
-db = davies_bouldin_score(
-    X_pca,
-    labels
-)
+db = davies_bouldin_score(X_pca,labels)
 
 print(f"Silhouette       : {sil:.6f}")
 print(f"Calinski-Harabasz: {ch:.6f}")
 print(f"Davies-Bouldin   : {db:.6f}")
 
-with open(
-    os.path.join(
-        SAVE_DIR,
-        "clustering_scores.txt"
-    ),
-    "w"
-) as f:
+with open(os.path.join(SAVE_DIR,"clustering_scores.txt"),"w") as f:
 
-    f.write(
-        f"PCA dimensions     : {X_pca.shape[1]}\n"
-    )
+    f.write(f"PCA dimensions     : {X_pca.shape[1]}\n")
 
-    f.write(
-        f"Explained variance : {explained:.6f}\n"
-    )
+    f.write(f"Explained variance : {explained:.6f}\n")
 
-    f.write(
-        f"K                  : 20\n"
-    )
+    f.write(f"K                  : 20\n")
 
-    f.write(
-        f"Silhouette         : {sil:.6f}\n"
-    )
+    f.write(f"Silhouette         : {sil:.6f}\n")
 
-    f.write(
-        f"Calinski-Harabasz  : {ch:.6f}\n"
-    )
+    f.write(f"Calinski-Harabasz  : {ch:.6f}\n")
 
-    f.write(
-        f"Davies-Bouldin     : {db:.6f}\n"
-    )
+    f.write(f"Davies-Bouldin     : {db:.6f}\n")
 
 # ============================================================
 # UMAP
@@ -210,17 +139,9 @@ umap_model = umap.UMAP(
     random_state=42
 )
 
-X_umap = umap_model.fit_transform(
-    X_pca
-)
+X_umap = umap_model.fit_transform(X_pca)
 
-np.save(
-    os.path.join(
-        SAVE_DIR,
-        "umap_2d.npy"
-    ),
-    X_umap
-)
+np.save(os.path.join(SAVE_DIR,"umap_2d.npy"),X_umap)
 
 print("UMAP done.")
 
@@ -228,42 +149,22 @@ print("UMAP done.")
 # UMAP PLOT
 # ============================================================
 
-plt.figure(
-    figsize=(8, 7)
-)
+plt.figure(figsize=(8, 7))
 
-plt.scatter(
-    X_umap[:, 0],
-    X_umap[:, 1],
-    c=labels,
-    cmap="tab20",
-    s=6,
-    alpha=0.7
-)
+plt.scatter(X_umap[:, 0],X_umap[:, 1],c=labels,cmap="tab20",s=6,alpha=0.7)
 
-plt.title(
-    "PCA → KMeans → UMAP"
-)
+plt.title("PCA → KMeans → UMAP")
 
-plt.xlabel(
-    "UMAP 1"
-)
+plt.xlabel("UMAP 1")
 
-plt.ylabel(
-    "UMAP 2"
-)
+plt.ylabel("UMAP 2")
 
 plt.grid(True)
 
 plt.tight_layout()
 
 plt.savefig(
-    os.path.join(
-        SAVE_DIR,
-        "umap_kmeans.png"
-    ),
-    dpi=300
-)
+    os.path.join(SAVE_DIR,"umap_kmeans.png"),dpi=300)
 
 plt.close()
 
@@ -283,17 +184,9 @@ tsne = TSNE(
     random_state=42
 )
 
-X_tsne = tsne.fit_transform(
-    X_pca
-)
+X_tsne = tsne.fit_transform(X_pca)
 
-np.save(
-    os.path.join(
-        SAVE_DIR,
-        "tsne_2d.npy"
-    ),
-    X_tsne
-)
+np.save(os.path.join(SAVE_DIR,"tsne_2d.npy"),X_tsne)
 
 print("t-SNE done.")
 
@@ -301,42 +194,21 @@ print("t-SNE done.")
 # TSNE PLOT
 # ============================================================
 
-plt.figure(
-    figsize=(8, 7)
-)
+plt.figure(figsize=(8, 7))
 
-plt.scatter(
-    X_tsne[:, 0],
-    X_tsne[:, 1],
-    c=labels,
-    cmap="tab20",
-    s=6,
-    alpha=0.7
-)
+plt.scatter( X_tsne[:, 0],X_tsne[:, 1],c=labels,cmap="tab20",s=6,alpha=0.7)
 
-plt.title(
-    "PCA → KMeans → t-SNE"
-)
+plt.title("PCA → KMeans → t-SNE")
 
-plt.xlabel(
-    "t-SNE 1"
-)
+plt.xlabel("t-SNE 1")
 
-plt.ylabel(
-    "t-SNE 2"
-)
+plt.ylabel("t-SNE 2")
 
 plt.grid(True)
 
 plt.tight_layout()
 
-plt.savefig(
-    os.path.join(
-        SAVE_DIR,
-        "tsne_kmeans.png"
-    ),
-    dpi=300
-)
+plt.savefig(os.path.join(SAVE_DIR,"tsne_kmeans.png"),dpi=300)
 
 plt.close()
 
@@ -346,40 +218,23 @@ print("t-SNE plot saved.")
 # SAVE SUMMARY
 # ============================================================
 
-summary_file = os.path.join(
-    SAVE_DIR,
-    "summary.txt"
-)
+summary_file = os.path.join(SAVE_DIR,"summary.txt")
 
 with open(summary_file, "w") as f:
 
-    f.write(
-        f"Original shape      : {X.shape}\n"
-    )
+    f.write(f"Original shape      : {X.shape}\n")
 
-    f.write(
-        f"PCA shape           : {X_pca.shape}\n"
-    )
+    f.write(f"PCA shape           : {X_pca.shape}\n")
 
-    f.write(
-        f"Explained variance  : {explained:.6f}\n"
-    )
+    f.write(f"Explained variance  : {explained:.6f}\n")
 
-    f.write(
-        f"Clusters            : 20\n"
-    )
+    f.write(f"Clusters            : 20\n")
 
-    f.write(
-        f"Silhouette          : {sil:.6f}\n"
-    )
+    f.write(f"Silhouette          : {sil:.6f}\n")
 
-    f.write(
-        f"Calinski-Harabasz   : {ch:.6f}\n"
-    )
+    f.write(f"Calinski-Harabasz   : {ch:.6f}\n")
 
-    f.write(
-        f"Davies-Bouldin      : {db:.6f}\n"
-    )
+    f.write(f"Davies-Bouldin      : {db:.6f}\n")
 
 print("\n========================================")
 print("Analysis complete.")
