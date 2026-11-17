@@ -4,13 +4,14 @@ Training pipeline for EmbeddingMultiTaskRegressor.
 Expects a CSV at DATA_CSV_PATH with a header row and columns in this order:
     col 0:      sequence
     col 1:      asphericity
-    col 2:      RE  (scaled end-to-end distance)
-    col 3:      RG  (scaled radius of gyration)
-    col 4:      scaling exponent
-    col 5..end: PLM embedding dimensions (e.g. emb_0, emb_1, ..., emb_{D-1})
+    col 2:      prefactor
+    col 3:      RE  (scaled end-to-end distance)
+    col 4:      RG  (scaled radius of gyration)
+    col 5:      scaling exponent
+    col 6..end: PLM embedding dimensions (e.g. emb_0, emb_1, ..., emb_{D-1})
 
 Column NAMES are ignored except to size the embedding — only column POSITION
-is used, so the header can say whatever you like.
+is used, so the header can be anything.
 
 Outputs (written to OUTPUT_DIR):
     best_model.pt   - checkpoint with lowest validation loss
@@ -65,13 +66,7 @@ class EmbeddingPropertyDataset(Dataset):
         labels    : FloatTensor [5]
     """
 
-    PROPERTY_NAMES = [
-        "asphericity",
-        "prefactor",
-        "scaled_re",
-        "scaled_rg",
-        "scaling_exponent",
-    ]
+    PROPERTY_NAMES = ["asphericity","prefactor","scaled_re","scaled_rg","scaling_exponent"]
 
     def __init__(self, records):
         """
@@ -85,20 +80,11 @@ class EmbeddingPropertyDataset(Dataset):
     def __getitem__(self, idx):
         rec = self.records[idx]
 
-        embedding = torch.tensor(
-            rec["embedding"],
-            dtype=torch.float32,
-        )
+        embedding = torch.tensor(rec["embedding"],dtype=torch.float32)
 
-        labels = torch.tensor(
-            [rec[name] for name in self.PROPERTY_NAMES],
-            dtype=torch.float32,
-        )
+        labels = torch.tensor([rec[name] for name in self.PROPERTY_NAMES],dtype=torch.float32)
 
-        return {
-            "embedding": embedding,
-            "labels": labels,
-        }
+        return {"embedding": embedding,"labels": labels}
 
 
 # ==========================================================
@@ -144,8 +130,7 @@ def load_records(csv_path):
             "CSV should contain:\n"
             "Sequence, Asphericity, Prefactor, "
             "Scaled_RE, Scaled_RG, Scaling_Exponent, "
-            "embedding columns..."
-        )
+            "embedding columns...")
 
     embedding_dim = df.shape[1] - 6
 
