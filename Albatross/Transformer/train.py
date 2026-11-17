@@ -8,10 +8,9 @@ Expects a CSV at DATA_CSV_PATH with a header row and columns in this order:
     col 3: RG   (scaled radius of gyration)
     col 4: scaling exponent
 
-Column NAMES in the header are ignored; only column POSITION is used, so the
-header can say whatever you like.
+Column NAMES in the header are ignored; only column POSITION is used
 
-Outputs (all written to OUTPUT_DIR):
+Outputs ( written to OUTPUT_DIR):
     vocab.json        - token -> id mapping used for encoding sequences
     best_model.pt      - model checkpoint with lowest validation loss
     last_model.pt      - model checkpoint after final epoch
