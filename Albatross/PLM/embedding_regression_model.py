@@ -1,7 +1,8 @@
 """
-Multi-task regression model that takes a PRE-POOLED protein language model (PLM)
-embedding (one fixed-length vector per sequence) and predicts 4 properties:
+Multi-task regression model that takes a protein language model (PLM)
+embedding (one fixed-length vector per sequence) and predicts 5 properties:
     - asphericity
+    - prefactor
     - scaled RE
     - scaled RG
     - scaling exponent
@@ -11,7 +12,7 @@ the PLM embedding already summarizes the whole sequence into one vector.
 
 Architecture
 ------------
-1. (optional) LayerNorm on the raw PLM embedding for stability.
+1.  LayerNorm on the raw PLM embedding for stability.
 2. Four property branches (small MLPs), each taking the embedding and producing:
        (a) a property-specific "label embedding"
        (b) an auxiliary scalar prediction for that property
