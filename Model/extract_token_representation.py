@@ -706,19 +706,9 @@ np.save(os.path.join(SAVE_DIR,"sequence_lengths.npy"),np.array(sequence_lengths,
 # SAVE COMPARISON
 # ============================================================
 
-with open(
-    os.path.join(
-        SAVE_DIR,
-        "comparison.txt"
-    ),
-    "w"
-) as f:
+with open(os.path.join(SAVE_DIR,"comparison.txt"),"w") as f:
 
-    f.write(
-        "\n".join(
-            comparison
-        )
-    )
+    f.write("\n".join(comparison))
 
 
 # ============================================================
@@ -729,55 +719,26 @@ print("\n" + "=" * 60)
 print("DONE")
 print("=" * 60)
 
-print(
-    "Number of sequences:",
-    len(sequences)
-)
+print("Number of sequences:",len(sequences))
 
-print(
-    "Local embeddings:",
-    len(local_embeddings)
-)
+print("Local embeddings:",len(local_embeddings))
 
-print(
-    "Global embeddings:",
-    len(global_embeddings)
-)
+print("Global embeddings:",len(global_embeddings))
 
-print(
-    "Token embeddings saved in:",
-    TOKEN_SAVE_DIR
-)
+print("Token embeddings saved in:",TOKEN_SAVE_DIR)
 
-print(
-    "Sequence lengths saved in:",
-    os.path.join(
-        SAVE_DIR,
-        "sequence_lengths.npy"
-    )
-)
+print("Sequence lengths saved in:",os.path.join(SAVE_DIR,"sequence_lengths.npy"))
 
-print(
-    "Reconstruction accuracy:",
-    f"{accuracy:.4f}"
-)
+print("Reconstruction accuracy:",f"{accuracy:.4f}")
 
 print("\nExample token embedding files:")
 
-for i in range(
-    min(5, len(sequences))
-):
+for i in range(min(5, len(sequences))):
 
-    file = os.path.join(
-        TOKEN_SAVE_DIR,
-        f"sample_{i + 1}.npy"
-    )
+    file = os.path.join(TOKEN_SAVE_DIR,f"sample_{i + 1}.npy")
 
     emb = np.load(file)
 
-    print(
-        f"sample_{i + 1}.npy : "
-        f"{emb.shape}"
-    )
+    print(f"sample_{i + 1}.npy : ", f"{emb.shape}")
 
 print("=" * 60)
