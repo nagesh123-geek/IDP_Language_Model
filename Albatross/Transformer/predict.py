@@ -1,7 +1,7 @@
 """
 Inference script for ProteinMultiTaskRegressor.
 
-Usage examples
+Usage 
 --------------
 Single sequence, from the command line:
     python predict.py --sequence "MKTAYIAKQRQISFVKSHFSRQ"
